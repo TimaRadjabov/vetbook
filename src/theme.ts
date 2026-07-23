@@ -16,6 +16,11 @@ export const theme = {
     grayLight: '#84978C',
     border: '#DCE6DF',
     claySoft: '#FBEDEA',
+    ash: '#A9B6AE', // stamp-pad gray — done / inactive status
+    mist: '#9FB3A6', // muted text on dark surfaces
+    clayDark: '#8A3A3A', // darker clay for small text on claySoft
+    inkMuted: '#4A5A51', // disabled items on ink surfaces
+    inkBorder: '#2E4038', // hairlines on ink surfaces
   },
   font: {
     display: "'Bitter', Georgia, serif",

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { animals, appointments, doctors, users } from './data';
-import type { Animal, NewVisitInput } from '../types';
+import type { Animal, NewAnimalInput, NewVisitInput } from '../types';
 
 // In-memory mutation target so created visits persist for the session.
 const db = { animals: animals.map((a) => ({ ...a, visits: [...a.visits], allergies: [...a.allergies] })) };
@@ -13,7 +13,8 @@ export const handlers = [
       return HttpResponse.json({ message: 'Неверный email или пароль' }, { status: 401 });
     }
     const { password: _password, email: _email, ...user } = found;
-    return HttpResponse.json({ token: 'mock-token', user });
+    // Токен кодирует id пользователя — хендлеры могут узнать, кто делает запрос.
+    return HttpResponse.json({ token: `mock-token-${found.id}`, user });
   }),
 
   http.get('/api/doctors', () => HttpResponse.json(doctors)),
@@ -35,14 +36,44 @@ export const handlers = [
     return HttpResponse.json(animal);
   }),
 
+  http.post('/api/animals', async ({ request }) => {
+    const input = (await request.json()) as NewAnimalInput;
+    const newAnimal: Animal = {
+      id: `a-${Date.now()}`,
+      chartId: `#CHART-${String(db.animals.length + 200).padStart(4, '0')}`,
+      name: input.name,
+      species: input.species,
+      breed: input.breed,
+      ageYears: input.ageYears,
+      owner: { id: `o-${Date.now()}`, name: input.ownerName, phone: input.ownerPhone },
+      status: 'active',
+      allergies: [],
+      vitals: {},
+      visits: [],
+    };
+    db.animals.push(newAnimal);
+    return HttpResponse.json(newAnimal, { status: 201 });
+  }),
+
+  http.patch('/api/animals/:id', async ({ params, request }) => {
+    const animal = db.animals.find((a) => a.id === params.id);
+    if (!animal) return HttpResponse.json({ message: 'Не найдено' }, { status: 404 });
+    const patch = (await request.json()) as Partial<Animal>;
+    Object.assign(animal, patch);
+    return HttpResponse.json(animal);
+  }),
+
   http.post('/api/animals/:id/visits', async ({ params, request }) => {
     const animal = db.animals.find((a) => a.id === params.id) as Animal | undefined;
     if (!animal) return HttpResponse.json({ message: 'Не найдено' }, { status: 404 });
     const input = (await request.json()) as NewVisitInput;
+    // Врач — текущий пользователь из токена (как сделает реальный бэкенд).
+    const userId = request.headers.get('Authorization')?.replace('Bearer mock-token-', '');
+    const currentUser = users.find((u) => u.id === userId);
     animal.visits.unshift({
       id: `v-${Date.now()}`,
       date: new Date().toISOString().slice(0, 10),
-      doctorName: 'Др. Иванов',
+      doctorName: currentUser?.name ?? 'Др. Иванов',
       diagnosis: input.diagnosis,
       prescriptions: input.prescriptions,
     });

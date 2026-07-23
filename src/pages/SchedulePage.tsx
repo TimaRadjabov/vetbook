@@ -2,24 +2,12 @@ import { Fragment } from 'react';
 import styled from 'styled-components';
 import { AppShell } from '../components/layout/AppShell';
 import { Stamp } from '../components/ui/Stamp';
+import { LoadingState, ErrorState, EmptyState } from '../components/ui/QueryState';
 import { useAppointments, useDoctors } from '../api/schedule';
-import type { Appointment, AppointmentStatus } from '../types';
+import { APPOINTMENT_STATUS, APPOINTMENT_STATUSES, type StatusTone } from '../constants/appointment';
+import type { Appointment } from '../types';
 
 const SLOTS = ['09:00', '10:00', '11:00', '12:00', '13:00'];
-
-const STATUS_COLOR: Record<AppointmentStatus, string> = {
-  confirmed: '#2F6F52',
-  surgery: '#C98A2B',
-  attention: '#B94A3E',
-  done: '#A9B6AE',
-};
-
-const STATUS_LABEL: Record<AppointmentStatus, string> = {
-  confirmed: 'Подтверждён',
-  surgery: 'Операция',
-  attention: 'Требует внимания',
-  done: 'Завершён',
-};
 
 const Toolbar = styled.div`
   display: flex;
@@ -51,7 +39,7 @@ const DoctorName = styled.div`
 const DoctorSpec = styled.div`
   font-family: ${(p) => p.theme.font.body};
   font-size: 11.5px;
-  color: #9fb3a6;
+  color: ${(p) => p.theme.color.mist};
 `;
 
 const TimeCell = styled.div`
@@ -68,12 +56,12 @@ const SlotCell = styled.div`
   margin-right: 6px;
 `;
 
-const Appt = styled.div<{ $color: string; $span: number }>`
+const Appt = styled.div<{ $tone: StatusTone; $span: number }>`
   position: absolute;
   inset: 4px 4px auto 4px;
   height: ${(p) => p.$span * 76 - 8}px;
-  background: ${(p) => p.$color};
-  color: #fff;
+  background: ${(p) => p.theme.color[p.$tone]};
+  color: ${(p) => p.theme.color.white};
   border-radius: 6px;
   padding: 8px 10px;
   font-family: ${(p) => p.theme.font.body};
@@ -97,21 +85,24 @@ const LegendItem = styled.div`
   color: ${(p) => p.theme.color.gray};
 `;
 
-const Dot = styled.span<{ $color: string }>`
+const Dot = styled.span<{ $tone: StatusTone }>`
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  background: ${(p) => p.$color};
+  background: ${(p) => p.theme.color[p.$tone]};
 `;
 
 export function SchedulePage() {
-  const { data: doctors } = useDoctors();
-  const { data: appointments } = useAppointments();
+  const { data: doctors, isLoading: doctorsLoading, isError: doctorsError, error: dErr } = useDoctors();
+  const { data: appointments, isLoading: apptsLoading, isError: apptsError, error: aErr } = useAppointments();
 
-  if (!doctors || !appointments) {
+  const isLoading = doctorsLoading || apptsLoading;
+  const isError = doctorsError || apptsError;
+
+  if (isLoading || isError) {
     return (
       <AppShell title="Расписание врачей">
-        <p>Загрузка...</p>
+        {isError ? <ErrorState error={dErr ?? aErr} prefix="Не удалось загрузить расписание" /> : <LoadingState />}
       </AppShell>
     );
   }
@@ -125,41 +116,45 @@ export function SchedulePage() {
   return (
     <AppShell title="Расписание врачей" chartId={`#SCHED-${new Date().toISOString().slice(5, 10)}`}>
       <Toolbar>
-        <Stamp $color="#2F6F52">{today}</Stamp>
+        <Stamp>{today}</Stamp>
       </Toolbar>
 
-      <GridWrap style={{ ['--cols' as string]: doctors.length }}>
-        <div />
-        {doctors.map((d) => (
-          <HeaderCell key={d.id}>
-            <DoctorName>{d.name}</DoctorName>
-            <DoctorSpec>{d.specialty}</DoctorSpec>
-          </HeaderCell>
-        ))}
+      {doctors!.length === 0 ? (
+        <EmptyState>Нет врачей в расписании</EmptyState>
+      ) : (
+        <GridWrap style={{ ['--cols' as string]: doctors!.length }}>
+          <div />
+          {doctors!.map((d) => (
+            <HeaderCell key={d.id}>
+              <DoctorName>{d.name}</DoctorName>
+              <DoctorSpec>{d.specialty}</DoctorSpec>
+            </HeaderCell>
+          ))}
 
-        {SLOTS.map((slot, si) => (
-          <Fragment key={slot}>
-            <TimeCell>{slot}</TimeCell>
-            {doctors.map((d) => {
-              const appt = findAppt(d.id, si);
-              return (
-                <SlotCell key={`${d.id}-${slot}`}>
-                  {appt && (
-                    <Appt $color={STATUS_COLOR[appt.status]} $span={appt.durationSlots}>
-                      {appt.animalName} · {appt.reason}
-                    </Appt>
-                  )}
-                </SlotCell>
-              );
-            })}
-          </Fragment>
-        ))}
-      </GridWrap>
+          {SLOTS.map((slot, si) => (
+            <Fragment key={slot}>
+              <TimeCell>{slot}</TimeCell>
+              {doctors!.map((d) => {
+                const appt = findAppt(d.id, si);
+                return (
+                  <SlotCell key={`${d.id}-${slot}`}>
+                    {appt && (
+                      <Appt $tone={APPOINTMENT_STATUS[appt.status].tone} $span={appt.durationSlots}>
+                        {appt.animalName} · {appt.reason}
+                      </Appt>
+                    )}
+                  </SlotCell>
+                );
+              })}
+            </Fragment>
+          ))}
+        </GridWrap>
+      )}
 
       <Legend>
-        {(Object.keys(STATUS_LABEL) as AppointmentStatus[]).map((s) => (
+        {APPOINTMENT_STATUSES.map((s) => (
           <LegendItem key={s}>
-            <Dot $color={STATUS_COLOR[s]} /> {STATUS_LABEL[s]}
+            <Dot $tone={APPOINTMENT_STATUS[s].tone} /> {APPOINTMENT_STATUS[s].label}
           </LegendItem>
         ))}
       </Legend>

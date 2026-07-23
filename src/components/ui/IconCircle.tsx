@@ -1,21 +1,21 @@
 import styled from 'styled-components';
 import type { IconType } from 'react-icons';
 
-const Circle = styled.div<{ $bg: string; $size: number }>`
+const Circle = styled.div<{ $bg?: string; $size: number }>`
   width: ${(p) => p.$size}px;
   height: ${(p) => p.$size}px;
   border-radius: 50%;
-  background: ${(p) => p.$bg};
+  background: ${(p) => p.$bg ?? p.theme.color.scrub};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: ${(p) => p.theme.color.white};
   flex-shrink: 0;
 `;
 
 interface Props {
   icon: IconType;
-  color: string;
+  color?: string; // theme color; defaults to scrub
   size?: number;
 }
 

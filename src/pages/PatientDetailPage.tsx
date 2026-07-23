@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useParams } from 'react-router-dom';
-import { MdPets, MdWarningAmber, MdMonitorWeight, MdThermostat, MdCheckCircle, MdMedication, MdAdd } from 'react-icons/md';
+import { MdWarningAmber, MdMonitorWeight, MdThermostat, MdCheckCircle, MdMedication, MdAdd } from 'react-icons/md';
 import { AppShell } from '../components/layout/AppShell';
 import { Card, Eyebrow } from '../components/ui/Card';
 import { Stamp } from '../components/ui/Stamp';
-import { IconCircle } from '../components/ui/IconCircle';
+import { AnimalAvatar } from '../components/ui/AnimalAvatar';
 import { Button } from '../components/ui/Button';
-import { useAnimal } from '../api/animals';
+import { LoadingState, ErrorState } from '../components/ui/QueryState';
+import { useAnimal, useUpdateAnimal } from '../api/animals';
 import { NewVisitModal } from '../components/patient/NewVisitModal';
+import { plural } from '../utils/plural';
 
 const Grid = styled.div`
   display: grid;
@@ -115,7 +117,13 @@ const AllergyTitle = styled.div`
 const AllergyNote = styled.div`
   font-family: ${(p) => p.theme.font.body};
   font-size: 12px;
-  color: #8a3a3a;
+  color: ${(p) => p.theme.color.clayDark};
+`;
+
+const AlertHead = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const VitalRow = styled.div`
@@ -146,16 +154,20 @@ const TopRow = styled.div`
 
 export function PatientDetailPage() {
   const { id } = useParams();
-  const { data: animal, isLoading } = useAnimal(id);
+  const { data: animal, isLoading, isError, error } = useAnimal(id);
+  const { mutate: updateAnimal } = useUpdateAnimal(id ?? '');
   const [modalOpen, setModalOpen] = useState(false);
+  const theme = useTheme();
 
-  if (isLoading || !animal) {
+  if (isLoading || isError || !animal) {
     return (
       <AppShell title="Электронная карта животного">
-        <p>Загрузка...</p>
+        {isError ? <ErrorState error={error} prefix="Не удалось загрузить карту" /> : <LoadingState />}
       </AppShell>
     );
   }
+
+  const isActive = animal.status === 'active';
 
   return (
     <AppShell title="Электронная карта животного" chartId={animal.chartId}>
@@ -168,18 +180,22 @@ export function PatientDetailPage() {
       <Grid>
         <div>
           <HeaderCard $tone="sage">
-            <IconCircle icon={MdPets} color="#2F6F52" size={68} />
+            <AnimalAvatar
+                url={animal.avatarUrl}
+                size={68}
+                onUpload={(dataUrl) => updateAnimal({ avatarUrl: dataUrl })}
+              />
             <HeaderInfo>
               <Eyebrow>Пациент</Eyebrow>
               <PetName>{animal.name}</PetName>
               <Meta>
-                {animal.species} · {animal.breed} · {animal.ageYears} года
+                {animal.species} · {animal.breed} · {animal.ageYears} {plural(animal.ageYears, ['год', 'года', 'лет'])}
               </Meta>
               <OwnerLine>
                 {animal.owner.name} · {animal.owner.phone}
               </OwnerLine>
             </HeaderInfo>
-            <Stamp $color="#2F6F52">Активен</Stamp>
+            <Stamp $tone={isActive ? 'scrub' : 'ash'}>{isActive ? 'Активен' : 'Неактивен'}</Stamp>
           </HeaderCard>
 
           <Tabs>
@@ -203,10 +219,10 @@ export function PatientDetailPage() {
         <Side>
           {animal.allergies.length > 0 && (
             <Card $tone="alert">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <MdWarningAmber size={20} color="#B94A3E" />
-                <Eyebrow $color="#B94A3E">Критично</Eyebrow>
-              </div>
+              <AlertHead>
+                <MdWarningAmber size={20} color={theme.color.clay} />
+                <Eyebrow $color={theme.color.clay}>Критично</Eyebrow>
+              </AlertHead>
               {animal.allergies.map((al, i) => (
                 <div key={i}>
                   <AllergyTitle>Аллергия на {al.substance.toLowerCase()}</AllergyTitle>
@@ -218,28 +234,28 @@ export function PatientDetailPage() {
 
           <Card $tone="sage">
             <Eyebrow>Показатели</Eyebrow>
-            {animal.vitals.weightKg && (
+            {animal.vitals.weightKg != null && (
               <VitalRow>
-                <MdMonitorWeight size={20} color="#2F6F52" /> Вес: {animal.vitals.weightKg} кг
+                <MdMonitorWeight size={20} color={theme.color.scrub} /> Вес: {animal.vitals.weightKg} кг
               </VitalRow>
             )}
-            {animal.vitals.temperatureC && (
+            {animal.vitals.temperatureC != null && (
               <VitalRow>
-                <MdThermostat size={20} color="#2F6F52" /> Температура: {animal.vitals.temperatureC}°C
+                <MdThermostat size={20} color={theme.color.scrub} /> Температура: {animal.vitals.temperatureC}°C
               </VitalRow>
             )}
             {animal.vitals.sterilized && (
               <VitalRow>
-                <MdCheckCircle size={18} color="#84978C" /> Стерилизован
+                <MdCheckCircle size={18} color={theme.color.grayLight} /> Стерилизован
               </VitalRow>
             )}
           </Card>
 
           <Card $tone="dark">
-            <Eyebrow $color="#A9C9BA">Текущие назначения</Eyebrow>
+            <Eyebrow $color={theme.color.mist}>Текущие назначения</Eyebrow>
             {(animal.visits[0]?.prescriptions ?? ['Нет активных назначений']).map((rx, i) => (
               <RxRow key={i}>
-                <MdMedication size={18} color="#fff" /> {rx}
+                <MdMedication size={18} color={theme.color.white} /> {rx}
               </RxRow>
             ))}
           </Card>

@@ -55,6 +55,7 @@ export interface Animal {
   species: string;
   breed: string;
   ageYears: number;
+  avatarUrl?: string;
   owner: Owner;
   status: 'active' | 'inactive';
   allergies: Allergy[];
@@ -82,4 +83,13 @@ export interface NewVisitInput {
   weightKg?: number;
   temperatureC?: number;
   prescriptions?: string[];
+}
+
+export interface NewAnimalInput {
+  name: string;
+  species: string;
+  breed: string;
+  ageYears: number;
+  ownerName: string;
+  ownerPhone: string;
 }

@@ -28,6 +28,22 @@ export const Label = styled.label`
   margin-bottom: ${(p) => p.theme.space(1.5)};
 `;
 
+export const Select = styled.select`
+  font-family: ${(p) => p.theme.font.body};
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: ${(p) => p.theme.radius.sm};
+  border: 1px solid ${(p) => p.theme.color.border};
+  background: ${(p) => p.theme.color.white};
+  color: ${(p) => p.theme.color.ink};
+  width: 100%;
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid ${(p) => p.theme.color.scrub};
+    outline-offset: 1px;
+  }
+`;
+
 export const Textarea = styled.textarea`
   font-family: ${(p) => p.theme.font.body};
   font-size: 14px;

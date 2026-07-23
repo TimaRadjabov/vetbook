@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { MdSearch, MdLogout } from 'react-icons/md';
+import { MdLogout } from 'react-icons/md';
 import { useAuth } from '../../auth/AuthContext';
 
 const Bar = styled.header`
@@ -33,19 +33,6 @@ const ChartId = styled.span`
   color: ${(p) => p.theme.color.gray};
 `;
 
-const SearchBox = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: ${(p) => p.theme.color.sage};
-  border-radius: 8px;
-  padding: 8px 14px;
-  color: ${(p) => p.theme.color.gray};
-  font-family: ${(p) => p.theme.font.body};
-  font-size: 13px;
-  width: 220px;
-  flex-shrink: 0;
-`;
 
 const Right = styled.div`
   display: flex;
@@ -97,11 +84,7 @@ export function Topbar({ title, chartId }: { title: string; chartId?: string }) 
         <Title>{title}</Title>
         {chartId && <ChartId>{chartId}</ChartId>}
       </TitleBlock>
-      <SearchBox>
-        <MdSearch size={16} />
-        Поиск...
-      </SearchBox>
-      <Right>
+<Right>
         <Avatar>{user?.avatarInitial}</Avatar>
         <UserName>{user?.name}</UserName>
         <LogoutBtn onClick={logout} title="Выйти" aria-label="Выйти">

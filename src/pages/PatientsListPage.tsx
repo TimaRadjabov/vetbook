@@ -1,16 +1,27 @@
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { MdPets, MdChevronRight } from 'react-icons/md';
+import { MdChevronRight, MdAdd } from 'react-icons/md';
 import { AppShell } from '../components/layout/AppShell';
 import { Input } from '../components/ui/Input';
-import { IconCircle } from '../components/ui/IconCircle';
+import { AnimalAvatar } from '../components/ui/AnimalAvatar';
 import { Stamp } from '../components/ui/Stamp';
+import { Button } from '../components/ui/Button';
+import { LoadingState, ErrorState, EmptyState } from '../components/ui/QueryState';
+import { NewPatientModal } from '../components/patient/NewPatientModal';
 import { useAnimals } from '../api/animals';
 
-const SearchWrap = styled.div`
-  max-width: 360px;
+const TopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 20px;
+`;
+
+const SearchWrap = styled.div`
+  flex: 1;
+  max-width: 360px;
 `;
 
 const List = styled.div`
@@ -65,34 +76,42 @@ const ChartId = styled.span`
   color: ${(p) => p.theme.color.grayLight};
 `;
 
-const Empty = styled.p`
-  font-family: ${(p) => p.theme.font.body};
-  color: ${(p) => p.theme.color.gray};
-`;
-
 export function PatientsListPage() {
   const [q, setQ] = useState('');
-  const { data: animals, isLoading } = useAnimals(q);
+  const [newPatientOpen, setNewPatientOpen] = useState(false);
+  const { data: animals, isLoading, isError, error } = useAnimals(q);
   const navigate = useNavigate();
+  const theme = useTheme();
+
+  const trimmedQ = q.trim();
+  const isEmptyResult = !isLoading && !isError && animals?.length === 0;
 
   return (
     <AppShell title="Электронная карта животного">
-      <SearchWrap>
-        <Input
-          placeholder="Поиск по имени животного или владельцу..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск животных"
-        />
-      </SearchWrap>
+      <TopRow>
+        <SearchWrap>
+          <Input
+            placeholder="Поиск по имени животного или владельцу..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Поиск животных"
+          />
+        </SearchWrap>
+        <Button $variant="accent" onClick={() => setNewPatientOpen(true)}>
+          <MdAdd size={18} /> Новый пациент
+        </Button>
+      </TopRow>
 
-      {isLoading && <Empty>Загрузка...</Empty>}
-      {!isLoading && animals?.length === 0 && <Empty>Ничего не найдено</Empty>}
+      {isError && <ErrorState error={error} prefix="Не удалось загрузить список" />}
+
+      {isLoading && <LoadingState />}
+      {isEmptyResult && trimmedQ === '' && <EmptyState>Пока нет пациентов</EmptyState>}
+      {isEmptyResult && trimmedQ !== '' && <EmptyState>По запросу «{trimmedQ}» ничего не найдено</EmptyState>}
 
       <List>
         {animals?.map((a) => (
           <Row key={a.id} onClick={() => navigate(`/patients/${a.id}`)}>
-            <IconCircle icon={MdPets} color="#2F6F52" size={48} />
+            <AnimalAvatar url={a.avatarUrl} size={48} />
             <Info>
               <Name>
                 {a.name} <ChartId>{a.chartId}</ChartId>
@@ -101,11 +120,17 @@ export function PatientsListPage() {
                 {a.species} · {a.breed} · {a.owner.name}
               </Meta>
             </Info>
-            {a.allergies.length > 0 && <Stamp $color="#B94A3E" $size="sm">Аллергия</Stamp>}
-            <MdChevronRight size={20} color="#84978C" />
+            {a.allergies.length > 0 && (
+              <Stamp $tone="clay" $size="sm">
+                Аллергия
+              </Stamp>
+            )}
+            <MdChevronRight size={20} color={theme.color.grayLight} />
           </Row>
         ))}
       </List>
+
+      {newPatientOpen && <NewPatientModal onClose={() => setNewPatientOpen(false)} />}
     </AppShell>
   );
 }

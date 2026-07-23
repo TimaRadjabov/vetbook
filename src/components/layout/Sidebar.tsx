@@ -58,12 +58,12 @@ const Item = styled(NavLink)<{ $active: boolean; $disabled: boolean }>`
   font-size: 14px;
   font-weight: 500;
   position: relative;
-  color: #84978c;
+  color: ${(p) => p.theme.color.grayLight};
 
   ${(p) =>
     p.$disabled &&
     css`
-      color: #4a5a51;
+      color: ${p.theme.color.inkMuted};
       cursor: default;
       pointer-events: none;
     `}
@@ -86,7 +86,7 @@ const Hole = styled.span<{ $active: boolean }>`
   height: 12px;
   border-radius: 50%;
   background: ${(p) => (p.$active ? p.theme.color.kraft : p.theme.color.ink)};
-  border: 1px solid ${(p) => (p.$active ? p.theme.color.kraft : '#2E4038')};
+  border: 1px solid ${(p) => (p.$active ? p.theme.color.kraft : p.theme.color.inkBorder)};
 `;
 
 const Soon = styled.span`
@@ -96,7 +96,7 @@ const Soon = styled.span`
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #4a5a51;
+  color: ${(p) => p.theme.color.inkMuted};
 `;
 
 export function Sidebar() {
